@@ -1,154 +1,71 @@
 # PackageProof Pro
 
-PackageProof Pro is a paid OKX.AI A2MCP dependency firewall for npm and PyPI package checks.
+PackageProof Pro is an Algorand x402 v2-paid dependency firewall for npm and PyPI. It returns an auditable `allow`, `review`, or `block` verdict using registry intelligence, static analysis, optional E2B sandbox detonation, and an optional OpenRouter explanation layer.
 
-## Phase 1 through 5
+## API
 
-This repository currently implements:
+- `GET /` — machine-readable service and payment manifest
+- `GET /health` — runtime and Algorand payment configuration
+- `POST /v1/analyze-package` — paid package risk assessment
+- `POST /v1/analyze-manifest` — free manifest analysis
+- `GET /v1/reports/{report_id}` — free report retrieval
 
-- FastAPI + Pydantic v2 API
-- `GET /health`
-- `POST /v1/analyze-package`
-- `GET /v1/reports/{report_id}`
-- SQLite report persistence and 24 hour cache reuse
-- npm, PyPI, and OSV registry intelligence
-- registry reputation signals for package age, release age, source metadata, maintainers, and dependency surface
-- typosquat, slopsquat, and dependency-confusion name analysis
-- source archive static scanning for install hooks, startup hooks, secret references, process launch, network exfiltration, obfuscation, and wallet strings
-- behavior-chain extraction for install-time secret access and possible exfiltration
-- E2B detonation planning for npm/PyPI packages with fake secret canaries
-- E2B filesystem before/after diff and sensitive-write detection
-- E2B `strace` capture when available for `execve`, `openat`, `connect`, and `sendto`
-- sandbox evidence extraction for canary access, outbound network activity, process execution, and possible secret exfiltration
-- deterministic weighted rule engine with score contribution breakdowns
-- verdicts are derived from evidence only; the AI summary never changes the verdict
-- `POST /v1/analyze-manifest` for npm `package.json` and PyPI requirements-style manifests
-- malicious fixture corpus for startup hooks, secret exfiltration, and native binary droppers
-- registry package-diff signals for new lifecycle scripts, CLI surface, dependency spikes, and new wheels
-- provenance/source metadata signals for missing integrity, digests, and project links
-- native artifact detection for `.node`, `.so`, `.dll`, `.exe`, `.pyd`, and `.dylib` files
-- E2B declared CLI/bin probes using npm `bin` metadata and Python package command names
-- E2B unique canary values per scan, process snapshots, network classification, and artifact summaries
-- optional E2B detonation when `E2B_API_KEY` is configured
-- optional OpenRouter analyst summary when `OPENROUTER_API_KEY` is configured
-- optional OKX x402 middleware when payment credentials are configured
+`POST /v1/analyze-package` uses the official `x402-avm` Python SDK, x402 v2 `exact` payments, Algorand USDC, GoPlausible's facilitator, and the Bazaar discovery extension. Payment configuration fails closed when enabled but incomplete.
 
-## Run locally
+## Local development
 
 ```powershell
-uv sync
-uv run uvicorn packageproof.main:app --reload
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e . pytest pytest-asyncio ruff
+Copy-Item .env.example .env
+.\.venv\Scripts\python.exe -m uvicorn packageproof.main:app --reload --port 8000
 ```
 
-Open `http://127.0.0.1:8000/health`.
+Keep `X402_ENABLED=false` for ordinary unit tests. To validate the real TestNet challenge, set:
 
-## Deploy on Railway
-
-This repository is Railway-ready with `Dockerfile` and `railway.json`.
-
-1. Create a new Railway project from the GitHub repo.
-2. Set the Railway service variables from `.env.example`.
-3. Deploy the service.
-4. Confirm the health check:
-
-```text
-https://<your-railway-domain>/health
+```env
+X402_ENABLED=true
+X402_NETWORK=testnet
+PAY_TO_ADDRESS=<58-character TestNet address>
+FACILITATOR_URL=https://facilitator.goplausible.xyz
+X402_CHALLENGE_TAG=x402-global-challenge
 ```
 
-5. Register this paid A2MCP endpoint with OKX.AI:
+The service automatically selects TestNet USDC ASA `10458941`. `X402_ASSET_ID` is only a safety assertion; when set, startup rejects an ID that does not match the selected network.
 
-```text
-https://<your-railway-domain>/v1/analyze-package
+## Paid TestNet check
+
+The buyer mnemonic is needed only by the local test client. Never deploy it to the server or commit it.
+
+```powershell
+$env:ALGORAND_MNEMONIC="<disposable TestNet mnemonic>"
+$env:AVM_ADDRESS="<derived TestNet address>"
+.\.venv\Scripts\python.exe scripts/live_x402_paid_check.py `
+  --service package `
+  --url http://127.0.0.1:8000/v1/analyze-package
 ```
 
-Required production variables:
+The script enforces a 0.10 USDC maximum, defaults to TestNet, verifies that the mnemonic derives the expected address, and requires an explicit `--allow-mainnet` flag for any MainNet payment.
+
+## MainNet cutover
 
 ```env
 ENVIRONMENT=production
-DATABASE_URL=sqlite:////app/data/packageproof.db
 X402_ENABLED=true
-NETWORK=eip155:196
-PAY_TO_ADDRESS=0x...
-OKX_API_KEY=...
-OKX_SECRET_KEY=...
-OKX_PASSPHRASE=...
-OKX_BASE_URL=https://web3.okx.com
-ANALYZE_PACKAGE_PRICE=$0.05
-ENABLE_E2B=true
-E2B_API_KEY=e2b_...
-OPENROUTER_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=openai/gpt-4.1-mini
+X402_NETWORK=mainnet
+PAY_TO_ADDRESS=<MainNet account opted into USDC ASA 31566704>
+FACILITATOR_URL=https://facilitator.goplausible.xyz
+X402_ASSET_ID=31566704
+X402_CHALLENGE_TAG=x402-global-challenge
 ```
 
-Railway provides `PORT` automatically. The Docker command binds Uvicorn to
-`0.0.0.0:${PORT}`.
+Deploy behind public HTTPS, settle one real MainNet payment through GoPlausible, and confirm the resource appears in Bazaar and the challenge leaderboard. If both repository services use one `payTo`, expose them as routes under one root domain; the challenge rules prohibit reusing one merchant address across different domains.
 
-For a no-cost live demo, set `X402_EXEMPT_PAYERS` to a comma-separated list of
-buyer wallet addresses. Those wallets still must sign the x402 challenge, but
-the server grants access after signature verification without settlement. Empty
-defaults to the owner demo wallet; set `X402_EXEMPT_PAYERS=none` for fully paid
-production.
-
-## x402 payment config
-
-For OKX.AI production registration, set:
-
-```env
-X402_ENABLED=true
-NETWORK=eip155:196
-PAY_TO_ADDRESS=0x...
-OKX_API_KEY=...
-OKX_SECRET_KEY=...
-OKX_PASSPHRASE=...
-ANALYZE_PACKAGE_PRICE=$0.05
-```
-
-Use `NETWORK=eip155:1952` only while validating on X Layer testnet.
-
-Without these values, the service starts in local development mode and leaves the analysis endpoint unwrapped so tests and scanner work can continue.
-
-## E2B sandbox config
-
-```env
-ENABLE_E2B=true
-E2B_API_KEY=e2b_...
-E2B_ALLOW_INTERNET_ACCESS=true
-E2B_INSTALL_STRACE=true
-E2B_TEMPLATE=
-E2B_TIMEOUT_SECONDS=90
-```
-
-Keep `ENABLE_E2B=false` for cheap local static/intelligence testing.
-
-## Live core checks
-
-With `E2B_API_KEY` and `OPENROUTER_API_KEY` set in the shell:
+## Verification
 
 ```powershell
-uv run python scripts/live_core_check.py
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
-The script exercises safe npm/PyPI packages, a typosquat case, and a missing package case
-with caching disabled.
-
-## Live paid x402 check
-
-Start the API with `X402_ENABLED=true`, then provide a funded buyer key only in your
-local shell or `.env`:
-
-```powershell
-$env:X402_BUYER_PRIVATE_KEY="0x..."
-uv run python scripts/live_x402_paid_check.py --url http://127.0.0.1:8001/v1/analyze-package
-```
-
-The script uses the official Python x402 client to handle the unpaid `402` challenge,
-sign the payment payload, retry the request, and print the final report metadata. It
-does not print the buyer key.
-
-## Example
-
-```powershell
-curl -X POST http://127.0.0.1:8000/v1/analyze-package `
-  -H "Content-Type: application/json" `
-  -d '{"ecosystem":"npm","package":"lodash","version":"latest","analysis_depth":"standard","include_ai_summary":true}'
-```
+The project is Railway-ready. Set the Railway service root directory to `proofX`, configure environment variables from `.env.example`, and persist `/app/data` if SQLite reports must survive redeploys.

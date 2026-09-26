@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from packageproof.core.config import Settings
@@ -16,17 +17,40 @@ from packageproof.services.openrouter import OpenRouterAnalyst
 
 
 def test_health(tmp_path):
-    app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'test.db'}"))
+    app = create_app(
+        Settings(database_url=f"sqlite:///{tmp_path / 'test.db'}", x402_enabled=False)
+    )
     client = TestClient(app)
 
     response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+    assert response.json()["x402_network"] == "testnet"
+    assert response.json()["x402_asset_id"] == "10458941"
+
+
+def test_algorand_network_selects_matching_usdc_asset():
+    testnet = Settings(x402_enabled=False, x402_network="testnet", x402_asset_id="10458941")
+    mainnet = Settings(x402_enabled=False, x402_network="mainnet", x402_asset_id="31566704")
+
+    assert testnet.x402_network_caip2.startswith("algorand:SGO1")
+    assert testnet.resolved_x402_asset_id == "10458941"
+    assert mainnet.x402_network_caip2.startswith("algorand:wGHE")
+    assert mainnet.resolved_x402_asset_id == "31566704"
+
+
+def test_algorand_network_rejects_wrong_usdc_asset():
+    settings = Settings(x402_enabled=False, x402_network="mainnet", x402_asset_id="10458941")
+
+    with pytest.raises(ValueError, match="31566704"):
+        _ = settings.resolved_x402_asset_id
 
 
 def test_report_not_found(tmp_path):
-    app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'test.db'}"))
+    app = create_app(
+        Settings(database_url=f"sqlite:///{tmp_path / 'test.db'}", x402_enabled=False)
+    )
     client = TestClient(app)
 
     response = client.get("/v1/reports/rpt_missing")
@@ -35,7 +59,9 @@ def test_report_not_found(tmp_path):
 
 
 def test_validation_rejects_unknown_ecosystem(tmp_path):
-    app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'test.db'}"))
+    app = create_app(
+        Settings(database_url=f"sqlite:///{tmp_path / 'test.db'}", x402_enabled=False)
+    )
     client = TestClient(app)
 
     response = client.post(
@@ -62,7 +88,9 @@ def test_analyze_manifest_route_uses_manifest_analyzer(tmp_path, monkeypatch):
         )
 
     monkeypatch.setattr(ManifestAnalyzer, "analyze", fake_analyze)
-    app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'test.db'}"))
+    app = create_app(
+        Settings(database_url=f"sqlite:///{tmp_path / 'test.db'}", x402_enabled=False)
+    )
     client = TestClient(app)
 
     response = client.post(

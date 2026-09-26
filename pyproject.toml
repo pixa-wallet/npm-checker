@@ -1,14 +1,14 @@
 [project]
 name = "packageproof-pro"
-version = "0.1.0"
-description = "Paid OKX.AI A2MCP dependency firewall for npm and PyPI packages."
+version = "0.2.0"
+description = "Algorand x402-paid dependency firewall for npm and PyPI packages."
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
 dependencies = [
     "e2b>=2.0.0",
     "fastapi>=0.115.0",
     "httpx>=0.28.0",
-    "okxweb3-app-x402[evm]>=0.1.1,<0.2.0",
+    "x402-avm[avm,extensions,fastapi,requests]==2.0.2",
     "openai>=1.90.0",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.8.0",

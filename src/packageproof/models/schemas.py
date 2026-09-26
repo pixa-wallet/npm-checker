@@ -16,6 +16,8 @@ class HealthResponse(BaseModel):
     service: str
     payment_configured: bool
     x402_enabled: bool
+    x402_network: str
+    x402_asset_id: str
 
 
 class AnalyzePackageRequest(BaseModel):

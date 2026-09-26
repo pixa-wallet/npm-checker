@@ -1,21 +1,21 @@
-# PackageProof Pro: Paid A2MCP Dependency Firewall
+# PackageProof Pro: Algorand x402 Dependency Firewall
 
 ## 5-Line Summary
-PackageProof Pro is a paid OKX.AI A2MCP service that checks npm/PyPI packages before agents install them.  
+PackageProof Pro is a paid Algorand x402 service that checks npm/PyPI packages before agents install them.  
 It combines registry intelligence, static analysis, and E2B sandbox detonation to detect malicious behavior.  
 OpenRouter powers the AI analyst layer that explains evidence and maps it to attack types.  
 The product protects AI coding agents from LiteLLM-style supply-chain attacks, typosquatting, slopsquatting, credential stealers, and crypto drainers.  
 We build it as a serious paid security API with reports, caching, scoring, and agent-readable verdicts.
 
 ## Summary
-Build a production-shaped **paid x402 ASP** for OKX.AI using **Python + FastAPI**, **OKX x402 FastAPI middleware**, **E2B hosted sandboxes**, and **OpenRouter**. The main registered A2MCP endpoint will be `POST /v1/analyze-package`, priced at **$0.05 per call** for launch.
+Build a production-shaped **paid x402 API** for the Algorand Global x402 Challenge using **Python + FastAPI**, the official **x402-avm FastAPI middleware**, **E2B hosted sandboxes**, and **OpenRouter**. The main Bazaar-discovered endpoint is `POST /v1/analyze-package`, priced at **$0.05 per call** for launch.
 
 The service returns a clear `allow`, `review`, or `block` verdict with structured evidence, a risk score, attack classifications, safer alternatives, and an AI-written analyst summary.
 
 ## Key Interfaces
 Public endpoints:
 - `GET /health`: free health check.
-- `POST /v1/analyze-package`: paid x402 endpoint registered with OKX.AI.
+- `POST /v1/analyze-package`: paid x402 endpoint discoverable through Bazaar.
 - `GET /v1/reports/{report_id}`: free report retrieval for completed analyses.
 - `POST /v1/analyze-manifest`: optional v1.1 endpoint for `package.json` / `requirements.txt`.
 
@@ -54,9 +54,10 @@ Response schema:
 ## Implementation Changes
 Backend:
 - Use **FastAPI + Pydantic v2** as the main service.
-- Add OKX x402 payment middleware to `POST /v1/analyze-package`.
-- Configure `NETWORK=eip155:196`, `PAY_TO_ADDRESS`, `OKX_API_KEY`, `OKX_SECRET_KEY`, and `OKX_PASSPHRASE`.
-- Use `eip155:1952` only for testnet validation before mainnet.
+- Add the official Algorand `x402-avm` middleware to `POST /v1/analyze-package`.
+- Configure `X402_NETWORK`, `PAY_TO_ADDRESS`, and the GoPlausible `FACILITATOR_URL`.
+- Use TestNet USDC ASA `10458941` for validation, then MainNet USDC ASA `31566704`.
+- Include Bazaar discovery metadata and `extra.tag=x402-global-challenge` before settlement.
 
 Scanning pipeline:
 - Registry intelligence: npm registry API, PyPI JSON API, OSV API, OpenSSF malicious package records.

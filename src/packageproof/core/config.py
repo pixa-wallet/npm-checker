@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,14 +16,14 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/packageproof.db"
 
     x402_enabled: bool = False
-    network: str = "eip155:196"
+    x402_network: Literal["testnet", "mainnet"] = "testnet"
     pay_to_address: str = ""
-    okx_api_key: str = ""
-    okx_secret_key: str = ""
-    okx_passphrase: str = ""
-    okx_base_url: str = "https://web3.okx.com"
+    facilitator_url: str = "https://facilitator.goplausible.xyz"
+    x402_asset_id: str = ""
+    x402_asset_symbol: str = "USDC"
+    x402_asset_decimals: int = 6
+    x402_challenge_tag: str = "x402-global-challenge"
     analyze_package_price: str = "$0.05"
-    x402_exempt_payers: str = ""
 
     e2b_api_key: str = ""
     enable_e2b: bool = False
@@ -41,26 +42,38 @@ class Settings(BaseSettings):
 
     @property
     def payment_configured(self) -> bool:
-        return all(
-            [
-                self.pay_to_address,
-                self.okx_api_key,
-                self.okx_secret_key,
-                self.okx_passphrase,
-            ]
+        if not self.pay_to_address or not self.facilitator_url:
+            return False
+
+        try:
+            from x402.mechanisms.avm import is_valid_address
+
+            return is_valid_address(self.pay_to_address)
+        except ImportError:
+            return False
+
+    @property
+    def x402_network_caip2(self) -> str:
+        from x402.mechanisms.avm import ALGORAND_MAINNET_CAIP2, ALGORAND_TESTNET_CAIP2
+
+        return (
+            ALGORAND_MAINNET_CAIP2
+            if self.x402_network == "mainnet"
+            else ALGORAND_TESTNET_CAIP2
         )
 
     @property
-    def x402_exempt_payer_list(self) -> list[str]:
-        default_demo_payer = "0x3a2daf805449362147809cf600f6789b0f66e604"
-        if self.x402_exempt_payers.strip().lower() in {"none", "false", "disabled"}:
-            return []
-        raw_payers = self.x402_exempt_payers.strip() or default_demo_payer
-        return [
-            payer.strip()
-            for payer in raw_payers.split(",")
-            if payer.strip()
-        ]
+    def resolved_x402_asset_id(self) -> str:
+        from x402.mechanisms.avm import USDC_MAINNET_ASA_ID, USDC_TESTNET_ASA_ID
+
+        expected = str(
+            USDC_MAINNET_ASA_ID if self.x402_network == "mainnet" else USDC_TESTNET_ASA_ID
+        )
+        if self.x402_asset_id and self.x402_asset_id != expected:
+            raise ValueError(
+                f"X402_ASSET_ID must be {expected} for Algorand {self.x402_network} USDC"
+            )
+        return expected
 
     @cached_property
     def sqlite_path(self) -> Path:

@@ -4,7 +4,7 @@ The strongest idea from OpenSSF Package Analysis is this: detect malware by obse
 
 **Architecture**
 ```text
-OKX.AI Agent
+Algorand x402 Agent
   -> x402 Paid Endpoint
   -> FastAPI API Gateway
   -> Analysis Orchestrator
@@ -30,7 +30,7 @@ DB: Postgres
 Cache: Redis
 Static rules: Semgrep + YARA + custom regex/AST rules
 AI: OpenRouter
-Payment: OKX x402 FastAPI middleware
+Payment: official x402-avm FastAPI middleware with GoPlausible facilitator
 Deploy: Fly.io / Railway / Render / VPS
 ```
 

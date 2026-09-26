@@ -17,6 +17,30 @@ from packageproof.services.analyzer import ManifestAnalyzer, PackageAnalyzer
 router = APIRouter()
 
 
+@router.get("/")
+async def service_manifest(request: Request) -> dict[str, object]:
+    settings = request.app.state.settings
+    return {
+        "service": settings.app_name,
+        "version": "0.2.0",
+        "description": "Algorand x402-paid npm and PyPI dependency risk analysis.",
+        "payment": {
+            "protocol": "x402-v2",
+            "network": settings.x402_network,
+            "caip2": settings.x402_network_caip2,
+            "asset": {"symbol": settings.x402_asset_symbol, "id": settings.resolved_x402_asset_id},
+            "facilitator": settings.facilitator_url,
+            "challenge_tag": settings.x402_challenge_tag,
+        },
+        "endpoints": [
+            {"method": "GET", "path": "/health", "paid": False},
+            {"method": "POST", "path": "/v1/analyze-package", "paid": True},
+            {"method": "POST", "path": "/v1/analyze-manifest", "paid": False},
+            {"method": "GET", "path": "/v1/reports/{report_id}", "paid": False},
+        ],
+    }
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health(request: Request) -> HealthResponse:
     settings = request.app.state.settings
@@ -25,6 +49,8 @@ async def health(request: Request) -> HealthResponse:
         service=settings.app_name,
         payment_configured=settings.payment_configured,
         x402_enabled=settings.x402_enabled,
+        x402_network=settings.x402_network,
+        x402_asset_id=settings.resolved_x402_asset_id,
     )
 
 

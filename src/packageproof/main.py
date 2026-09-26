@@ -18,8 +18,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
-        description="Paid OKX.AI A2MCP dependency firewall for npm and PyPI packages.",
+        version="0.2.0",
+        description="Algorand x402-paid dependency firewall for npm and PyPI packages.",
     )
     app.state.settings = settings
     app.state.report_store = report_store
