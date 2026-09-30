@@ -53,11 +53,11 @@ class EvidenceBundle(BaseModel):
     known_bad: list[dict[str, Any]] = Field(default_factory=list)
     registry: dict[str, Any] = Field(default_factory=dict)
     static: dict[str, Any] = Field(default_factory=dict)
-    sandbox: dict[str, Any] = Field(default_factory=dict)
-    network: dict[str, Any] = Field(default_factory=dict)
-    filesystem: dict[str, Any] = Field(default_factory=dict)
-    process: dict[str, Any] = Field(default_factory=dict)
-    artifacts: dict[str, Any] = Field(default_factory=dict)
+    sandbox: dict[str, Any] = Field(default_factory=dict, exclude=True)
+    network: dict[str, Any] = Field(default_factory=dict, exclude=True)
+    filesystem: dict[str, Any] = Field(default_factory=dict, exclude=True)
+    process: dict[str, Any] = Field(default_factory=dict, exclude=True)
+    artifacts: dict[str, Any] = Field(default_factory=dict, exclude=True)
     behavior_chain: list[dict[str, Any]] = Field(default_factory=list)
     scoring: dict[str, Any] = Field(default_factory=dict)
 
@@ -65,7 +65,6 @@ class EvidenceBundle(BaseModel):
 class ResponseMeta(BaseModel):
     cache_hit: bool = False
     analysis_depth: AnalysisDepth = "standard"
-    deterministic: bool = True
     ai_summary_used: bool = False
     warnings: list[str] = Field(default_factory=list)
 

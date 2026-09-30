@@ -62,7 +62,7 @@ class PackageAnalyzer:
         evidence.scoring = score_result.scoring
         summary = score_result.summary
         ai_analysis = None
-        if request.include_ai_summary:
+        if request.include_ai_summary and self.settings.openrouter_api_key:
             ai_analysis = await OpenRouterAnalyst(self.settings).analyze(
                 request=request,
                 evidence=evidence,
@@ -116,10 +116,6 @@ class PackageAnalyzer:
     @staticmethod
     def _warnings(evidence: EvidenceBundle) -> list[str]:
         warnings = []
-        if evidence.sandbox.get("enabled") is False:
-            warnings.append(str(evidence.sandbox.get("reason", "sandbox disabled")))
-        if evidence.sandbox.get("error"):
-            warnings.append(f"sandbox error: {evidence.sandbox['error']}")
         if evidence.static.get("archive_truncated"):
             warnings.append("source archive scan truncated")
         for error in evidence.static.get("archive_errors", []):

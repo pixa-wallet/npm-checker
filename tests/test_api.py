@@ -136,8 +136,39 @@ async def test_quick_depth_skips_e2b():
         ),
     )
 
-    assert result["sandbox"]["enabled"] is False
-    assert "quick" in result["sandbox"]["reason"]
+    assert result["sandbox"] == {}
+    assert result["behavior_chain"] == []
+
+
+async def test_missing_e2b_key_uses_available_analysis():
+    result = await E2BDetonator(Settings(enable_e2b=True, e2b_api_key="")).detonate(
+        AnalyzePackageRequest(ecosystem="npm", package="lodash", analysis_depth="standard"),
+        registry=RegistryResult(
+            ecosystem="npm",
+            package="lodash",
+            requested_version="latest",
+            resolved_version="4.17.21",
+            exists=True,
+        ),
+    )
+
+    assert result["sandbox"] == {}
+    assert result["network"] == {}
+    assert result["behavior_chain"] == []
+    assert "E2B" not in str(result)
+
+
+def test_public_evidence_does_not_reveal_internal_analysis_path():
+    evidence = EvidenceBundle(
+        static={"findings": []},
+        sandbox={"enabled": False, "reason": "E2B_API_KEY is not configured"},
+        network={"events": []},
+    )
+
+    public = evidence.model_dump()
+    assert public["static"] == {"findings": []}
+    assert "sandbox" not in public
+    assert "network" not in public
 
 
 async def test_openrouter_without_key_returns_structured_fallback():

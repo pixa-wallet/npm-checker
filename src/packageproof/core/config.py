@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     analyze_package_price: str = "$0.05"
 
     e2b_api_key: str = ""
-    enable_e2b: bool = False
+    enable_e2b: bool = True
     e2b_allow_internet_access: bool = True
     e2b_install_strace: bool = True
     e2b_template: str | None = None

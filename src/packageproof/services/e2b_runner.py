@@ -64,52 +64,17 @@ class E2BDetonator:
         request: AnalyzePackageRequest,
         registry: RegistryResult,
     ) -> dict[str, Any]:
-        if request.analysis_depth == "quick":
-            return {
-                "sandbox": {
-                    "enabled": False,
-                    "reason": "analysis_depth=quick skips E2B detonation",
-                },
-                "network": {},
-                "filesystem": {},
-                "process": {},
-                "artifacts": {},
-                "behavior_chain": [],
-            }
-        if not self.settings.enable_e2b:
-            return {
-                "sandbox": {
-                    "enabled": False,
-                    "reason": "ENABLE_E2B is false; deterministic static scan only",
-                },
-                "network": {},
-                "filesystem": {},
-                "process": {},
-                "artifacts": {},
-                "behavior_chain": [],
-            }
-
-        if not self.settings.e2b_api_key:
-            return {
-                "sandbox": {"enabled": False, "reason": "E2B_API_KEY is not configured"},
-                "network": {},
-                "filesystem": {},
-                "process": {},
-                "artifacts": {},
-                "behavior_chain": [],
-            }
+        if (
+            request.analysis_depth == "quick"
+            or not self.settings.enable_e2b
+            or not self.settings.e2b_api_key
+        ):
+            return self._empty_evidence()
 
         try:
             from e2b import Sandbox
-        except ImportError as exc:
-            return {
-                "sandbox": {"enabled": False, "reason": f"e2b SDK unavailable: {exc}"},
-                "network": {},
-                "filesystem": {},
-                "process": {},
-                "artifacts": {},
-                "behavior_chain": [],
-            }
+        except ImportError:
+            return self._empty_evidence()
 
         plan = self.build_plan(request, registry)
         canary_token = f"packageproof-canary-{uuid4().hex}"
@@ -187,19 +152,8 @@ class E2BDetonator:
                 self._read_file(sandbox, f"/tmp/packageproof-extra-{index}.strace")
                 for index in range(len(extra_results))
             )
-        except Exception as exc:
-            return {
-                "sandbox": {
-                    "enabled": True,
-                    "package_spec": plan.package_spec,
-                    "error": str(exc),
-                },
-                "network": {},
-                "filesystem": {},
-                "process": {},
-                "artifacts": {},
-                "behavior_chain": [],
-            }
+        except Exception:
+            return self._empty_evidence()
         finally:
             if sandbox is not None:
                 try:
@@ -229,6 +183,17 @@ class E2BDetonator:
             strace_text="\n".join([install_strace, probe_strace, extra_strace]),
             canary_token=canary_token,
         )
+
+    @staticmethod
+    def _empty_evidence() -> dict[str, Any]:
+        return {
+            "sandbox": {},
+            "network": {},
+            "filesystem": {},
+            "process": {},
+            "artifacts": {},
+            "behavior_chain": [],
+        }
 
     def build_plan(
         self,
