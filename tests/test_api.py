@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from packageproof.core.config import Settings
+from packageproof.db.reports import ReportStore
 from packageproof.main import create_app
 from packageproof.models.schemas import (
     AnalyzeManifestRequest,
@@ -11,7 +12,7 @@ from packageproof.models.schemas import (
     EvidenceBundle,
     RegistryResult,
 )
-from packageproof.services.analyzer import ManifestAnalyzer
+from packageproof.services.analyzer import ManifestAnalyzer, PackageAnalyzer
 from packageproof.services.e2b_runner import E2BDetonator
 from packageproof.services.openrouter import OpenRouterAnalyst
 
@@ -169,6 +170,28 @@ def test_public_evidence_does_not_reveal_internal_analysis_path():
     assert public["static"] == {"findings": []}
     assert "sandbox" not in public
     assert "network" not in public
+
+
+def test_cache_key_changes_when_optional_analysis_becomes_available(tmp_path):
+    request = AnalyzePackageRequest(ecosystem="npm", package="lodash")
+    base = Settings(
+        database_url=f"sqlite:///{tmp_path / 'base.db'}",
+        enable_e2b=True,
+        e2b_api_key="",
+        openrouter_api_key="",
+    )
+    enriched = Settings(
+        database_url=f"sqlite:///{tmp_path / 'enriched.db'}",
+        enable_e2b=True,
+        e2b_api_key="later-key",
+        openrouter_api_key="later-key",
+    )
+
+    base_key = PackageAnalyzer(base, ReportStore.from_settings(base))._cache_key(request)
+    enriched_key = PackageAnalyzer(enriched, ReportStore.from_settings(enriched))._cache_key(
+        request
+    )
+    assert base_key != enriched_key
 
 
 async def test_openrouter_without_key_returns_structured_fallback():

@@ -90,26 +90,41 @@ class PackageAnalyzer:
             ),
             created_at=datetime.now(UTC),
         )
-        self.report_store.save(
-            cache_key=cache_key,
-            package_coordinates={
-                "ecosystem": request.ecosystem,
-                "package": request.package,
-                "version": request.version,
-                "analysis_depth": request.analysis_depth,
-            },
-            response=response,
+        sandbox_requested = (
+            self.settings.enable_e2b
+            and bool(self.settings.e2b_api_key)
+            and request.analysis_depth != "quick"
         )
+        if not (sandbox_requested and not evidence.sandbox) and not (
+            ai_analysis is not None and ai_analysis.error
+        ):
+            self.report_store.save(
+                cache_key=cache_key,
+                package_coordinates={
+                    "ecosystem": request.ecosystem,
+                    "package": request.package,
+                    "version": request.version,
+                    "analysis_depth": request.analysis_depth,
+                },
+                response=response,
+            )
         return response
 
-    @staticmethod
-    def _cache_key(request: AnalyzePackageRequest) -> str:
+    def _cache_key(self, request: AnalyzePackageRequest) -> str:
         return "|".join(
             [
                 request.ecosystem,
                 request.package.lower(),
                 request.version.lower(),
                 request.analysis_depth,
+                "dynamic"
+                if self.settings.enable_e2b
+                and self.settings.e2b_api_key
+                and request.analysis_depth != "quick"
+                else "standard",
+                "ai"
+                if request.include_ai_summary and self.settings.openrouter_api_key
+                else "no-ai",
             ]
         )
 
