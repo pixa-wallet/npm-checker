@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 RUN mkdir -p /app/data
 
-CMD ["sh", "-c", "python -m uvicorn packageproof.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "python -m uvicorn packageproof.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]
